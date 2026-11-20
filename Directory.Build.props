@@ -1,0 +1,18 @@
+<Project>
+  <!--
+    Local paths for building.
+    BepInExCore must point at a BepInEx 5 "core" folder (it holds BepInEx.dll and 0Harmony.dll).
+    The default is Gale's Default profile for Stonewards. To use another folder, pass
+    -p:BepInExCore=<path> to dotnet build, or set it in a git-ignored Directory.Build.props.user.
+
+    DeployToProfile copies each build into <ProfileDir>\BepInEx\plugins\SiegeUpgradesEnglish\.
+    Set it to false if Gale has the Thunderstore release installed, or BepInEx will find two copies.
+  -->
+  <Import Project="Directory.Build.props.user" Condition="Exists('Directory.Build.props.user')" />
+  <PropertyGroup>
+    <ProfileDir Condition="'$(ProfileDir)' == ''">$(APPDATA)\com.kesomannen.gale\stonewards\profiles\Default</ProfileDir>
+    <BepInExCore Condition="'$(BepInExCore)' == ''">$(ProfileDir)\BepInEx\core</BepInExCore>
+    <PluginOut Condition="'$(PluginOut)' == ''">$(ProfileDir)\BepInEx\plugins\SiegeUpgradesEnglish</PluginOut>
+    <DeployToProfile Condition="'$(DeployToProfile)' == ''">true</DeployToProfile>
+  </PropertyGroup>
+</Project>

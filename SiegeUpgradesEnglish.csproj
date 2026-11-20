@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>SiegeUpgradesEnglish</AssemblyName>
+    <RootNamespace>SiegeUpgradesEnglish</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+
+    <!-- thunderstore/manifest.json is the single source of the version: the assembly, the
+         [BepInPlugin] attribute (via PluginInfo.g.cs below) and the package all use it. -->
+    <ManifestPath>$(MSBuildThisFileDirectory)thunderstore\manifest.json</ManifestPath>
+    <Version>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(ManifestPath)')), '"version_number"\s*:\s*"([^"]+)"').Groups[1].Value)</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="BepInEx" HintPath="$(BepInExCore)\BepInEx.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(BepInExCore)\0Harmony.dll" Private="false" />
+    <!-- Reference-only Unity assemblies from nuget.bepinex.dev (see nuget.config), so the build doesn't need a game install. -->
+    <PackageReference Include="UnityEngine.Modules" Version="6000.3.26" IncludeAssets="compile" PrivateAssets="all" />
+  </ItemGroup>
+
+  <Target Name="CheckVersion" BeforeTargets="BeforeBuild">
+    <Error Condition="'$(Version)' == ''" Text="Couldn't read version_number from $(ManifestPath)." />
+  </Target>
+
+  <Target Name="GeneratePluginInfo" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <PluginInfoFile>$(IntermediateOutputPath)PluginInfo.g.cs</PluginInfoFile>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(PluginInfoFile)" Overwrite="true" WriteOnlyWhenDifferent="true"
+                      Lines="namespace SiegeUpgradesEnglish { internal static class PluginInfo { public const string Version = &quot;$(Version)&quot;%3B } }" />
+    <ItemGroup>
+      <Compile Include="$(PluginInfoFile)" />
+      <FileWrites Include="$(PluginInfoFile)" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Local dev only: copy the DLL into the Gale profile after each build (off in CI or when the profile is missing). -->
+  <Target Name="CopyToProfile" AfterTargets="Build" Condition="'$(DeployToProfile)' == 'true' And '$(CI)' != 'true' And Exists('$(ProfileDir)')">
+    <MakeDir Directories="$(PluginOut)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginOut)" />
+  </Target>
+
+</Project>

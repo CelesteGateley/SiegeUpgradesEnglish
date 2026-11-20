@@ -1,0 +1,10 @@
+{
+  "name": "SiegeUpgradesEnglish",
+  "version_number": "1.0.0",
+  "website_url": "https://github.com/CelesteGateley/SiegeUpgradesEnglish",
+  "description": "Unofficial English translation for SiegeUpgrades 1.1.0: the upgrade window, prompts, notices and config descriptions. Follows the game's language setting. Doesn't modify SiegeUpgrades.",
+  "dependencies": [
+    "BepInEx-BepInExPack-5.4.2305",
+    "CatedralEmChamas-SiegeUpgrades-1.1.0"
+  ]
+}
