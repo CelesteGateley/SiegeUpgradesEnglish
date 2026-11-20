@@ -1,0 +1,88 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  # BepInEx 5 build that BepInExPack 5.4.2305 ships. BepInEx.dll and 0Harmony.dll come from its core folder;
+  # the Unity assemblies come from nuget.bepinex.dev during restore.
+  BEPINEX_VERSION: 5.4.23.5
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      released: ${{ steps.release.outputs.released }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Download BepInEx core
+        run: |
+          curl -fsSL -o bepinex.zip "https://github.com/BepInEx/BepInEx/releases/download/v${BEPINEX_VERSION}/BepInEx_win_x64_${BEPINEX_VERSION}.zip"
+          unzip -q bepinex.zip -d "$RUNNER_TEMP/bepinex"
+
+      - name: Build and package
+        shell: pwsh
+        run: ./package.ps1 -BepInExCore "$env:RUNNER_TEMP/bepinex/BepInEx/core"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SiegeUpgradesEnglish-thunderstore
+          path: dist/*.zip
+
+      # Creates a GitHub release only when the manifest version has no release yet,
+      # so pushes without a version bump just build.
+      - name: Create release
+        id: release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(jq -r .version_number thunderstore/manifest.json)
+          tag="v$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            echo "Release $tag already exists, skipping."
+            exit 0
+          fi
+          awk -v v="$version" '$0 == "## " v {f=1; next} /^## /{f=0} f' CHANGELOG.md > notes.md
+          gh release create "$tag" dist/*.zip --title "SiegeUpgradesEnglish $version" --notes-file notes.md --target "$GITHUB_SHA"
+          echo "released=true" >> "$GITHUB_OUTPUT"
+
+  # Runs only when the build job created a new GitHub release. The "thunderstore" environment
+  # can require your approval before this job starts (repo Settings > Environments).
+  publish:
+    needs: build
+    if: needs.build.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    environment: thunderstore
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: SiegeUpgradesEnglish-thunderstore
+          path: dist
+
+      - name: Publish to Thunderstore
+        env:
+          TCLI_AUTH_TOKEN: ${{ secrets.THUNDERSTORE_TOKEN }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          dotnet tool install -g tcli --version 0.2.4
+          tcli publish --config-path thunderstore/thunderstore.toml --file "dist/SiegeUpgradesEnglish-$VERSION.zip"

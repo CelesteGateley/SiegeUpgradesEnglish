@@ -1,0 +1,21 @@
+# Config for Thunderstore's CLI (tcli), used only by the publish job in .github/workflows/build.yml.
+# The package itself is built by package.ps1 from manifest.json, and tcli uploads that zip with
+# --file. Thunderstore reads the version from the manifest.json inside that zip.
+
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "CelesteMagisteel"
+name = "SiegeUpgradesEnglish"
+versionNumber = "0.0.0"  # unused with --file, but tcli requires a valid version
+
+[build]
+outdir = "../dist"  # unused with --file, but tcli requires it
+
+[publish]
+repository = "https://thunderstore.io"
+communities = ["stonewards"]
+
+[publish.categories]
+stonewards = ["mods", "misc"]
